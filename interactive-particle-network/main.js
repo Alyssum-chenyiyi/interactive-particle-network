@@ -60,6 +60,25 @@ window.addEventListener("resize", function () {
 const stars = [];
 const mouse = { x: null, y: null };
 const backgroundParallax = { strength: 0.03, maxOffset: 20 };
+const specialStars = [];
+let activeSpecialStar = null;
+const specialStarConfig = {
+  count: 3,
+  size: 90,
+  pulseSpeed: 0.002,
+  pulseRange: 0.25,
+  moveSpeed: 0.08,
+  margin: 80,
+  clickedScale: 1.6,
+  hoverRadius: 220,
+  hoverOffset: 10
+};
+const specialStarMessages = {};
+const overlay = document.getElementById("messageOverlay");
+const overlayText = document.getElementById("messageText");
+
+const specialStarImage = new Image();
+specialStarImage.src = "star.png";
 
 // Change in the mousemove event listener
 let animationIdleTimeout = null;
@@ -129,6 +148,42 @@ function resizeCanvas() {
   }
 }
 
+function createSpecialStars() {
+  specialStars.length = 0;
+  const columns = Math.min(specialStarConfig.count, 3);
+  const rows = Math.ceil(specialStarConfig.count / columns);
+  const usableWidth = canvasStars.width - specialStarConfig.margin * 2;
+  const usableHeight = canvasStars.height - specialStarConfig.margin * 2;
+  for (let i = 0; i < specialStarConfig.count; i++) {
+    const col = i % columns;
+    const row = Math.floor(i / columns);
+    const cellWidth = usableWidth / Math.max(1, columns);
+    const cellHeight = usableHeight / Math.max(1, rows);
+    const x =
+      specialStarConfig.margin +
+      cellWidth * col +
+      Math.random() * cellWidth;
+    const y =
+      specialStarConfig.margin +
+      cellHeight * row +
+      Math.random() * cellHeight;
+    specialStars.push({
+      id: i + 1,
+      x,
+      y,
+      baseX: x,
+      baseY: y,
+      targetX: x,
+      targetY: y,
+      baseSize: specialStarConfig.size,
+      currentScale: 1,
+      pulsePhase: Math.random() * Math.PI * 2,
+      clicked: false,
+      message: ""
+    });
+  }
+}
+
 function Star(x, y) {
   this.x = x;
   this.y = y;
@@ -193,6 +248,79 @@ function updateBackgroundParallax() {
 
   document.body.style.setProperty("--bg-x", `${offsetX}px`);
   document.body.style.setProperty("--bg-y", `${offsetY}px`);
+}
+
+function updateSpecialStars() {
+  specialStars.forEach((star) => {
+    if (star.clicked) {
+      const dx = star.targetX - star.x;
+      const dy = star.targetY - star.y;
+      star.x += dx * specialStarConfig.moveSpeed;
+      star.y += dy * specialStarConfig.moveSpeed;
+      star.currentScale +=
+        (specialStarConfig.clickedScale - star.currentScale) * 0.08;
+      return;
+    }
+
+    let offsetX = 0;
+    let offsetY = 0;
+    if (mouse.x !== null && mouse.y !== null) {
+      const dx = star.baseX - mouse.x;
+      const dy = star.baseY - mouse.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance < specialStarConfig.hoverRadius) {
+        const strength =
+          (1 - distance / specialStarConfig.hoverRadius) *
+          specialStarConfig.hoverOffset;
+        const norm = distance === 0 ? 1 : distance;
+        offsetX = (dx / norm) * strength;
+        offsetY = (dy / norm) * strength;
+      }
+    }
+
+    const targetX = star.baseX + offsetX;
+    const targetY = star.baseY + offsetY;
+    star.x += (targetX - star.x) * 0.08;
+    star.y += (targetY - star.y) * 0.08;
+    star.currentScale += (1 - star.currentScale) * 0.08;
+  });
+}
+
+function drawSpecialStars() {
+  if (!specialStarImage.complete) return;
+  specialStars.forEach((star) => {
+    const pulse =
+      1 +
+      Math.sin(performance.now() * specialStarConfig.pulseSpeed + star.pulsePhase) *
+        specialStarConfig.pulseRange;
+    const size = star.baseSize * pulse * star.currentScale;
+    const half = size / 2;
+    ctxStars.save();
+    ctxStars.globalAlpha = 0.9;
+    ctxStars.drawImage(specialStarImage, star.x - half, star.y - half, size, size);
+    ctxStars.restore();
+  });
+}
+
+activeSpecialStar = star;
+function showMessage(message) {
+  if (!overlay || !overlayText) return;
+  overlayText.textContent = message;
+  overlay.classList.add("visible");
+  overlay.setAttribute("aria-hidden", "false");
+}
+
+function hideMessage() {
+  if (!overlay) return;
+  overlay.classList.remove("visible");
+  overlay.setAttribute("aria-hidden", "true");
+  if (activeSpecialStar) {
+    activeSpecialStar.clicked = false;
+    activeSpecialStar.targetX = activeSpecialStar.baseX;
+    activeSpecialStar.targetY = activeSpecialStar.baseY;
+    activeSpecialStar.currentScale = 1;
+    activeSpecialStar = null;
+  }
 }
 
 Star.prototype.draw = function () {
@@ -304,11 +432,14 @@ function animateStars() {
       }
     }
   });
+  updateSpecialStars();
+  drawSpecialStars();
   requestAnimationFrame(animateStars);
 }
 
 function createStars() {
   resizeCanvas();
+  createSpecialStars();
   const numberOfStars =
     starDensities[options.starDensity] * canvasStars.width * canvasStars.height;
   for (let i = 0; i < numberOfStars; i++) {
@@ -332,13 +463,61 @@ function createStars() {
 }
 
 window.addEventListener("click", function (event) {
-  if (!options.interactive) return;
   const x = event.x;
   const y = event.y;
+
+  for (let i = 0; i < specialStars.length; i++) {
+    const star = specialStars[i];
+    const size = star.baseSize;
+    const dx = x - star.x;
+    const dy = y - star.y;
+    if (Math.sqrt(dx * dx + dy * dy) <= size * 0.6) {
+      if (!star.clicked) {
+        star.clicked = true;
+      }
+      activeSpecialStar = star;
+      showMessage(star.message || "ÔÝÎÞÄÚÈÝ");
+      const messageBox = document.getElementById("messageBox");
+      if (messageBox) {
+        const rect = messageBox.getBoundingClientRect();
+        const inset = Math.max(24, specialStarConfig.size * 0.3);
+        star.targetX = rect.right - inset;
+        star.targetY = rect.bottom - inset;
+      } else {
+        star.targetX = canvasStars.width / 2;
+        star.targetY = canvasStars.height / 2;
+      }
+      return;
+    }
+  }
+
+  if (!options.interactive) return;
   const star = new Star(x, y);
   stars.push(star);
 });
 
+if (overlay) {
+  overlay.addEventListener("click", function () {
+    hideMessage();
+  });
+}
+
 resizeCanvas(); // This will draw the background.
 createStars();
 animateStars();
+
+fetch("/api/messages")
+  .then((response) => response.json())
+  .then((data) => {
+    data.forEach((item) => {
+      specialStarMessages[item.id] = item.text;
+    });
+    specialStars.forEach((star) => {
+      if (specialStarMessages[star.id]) {
+        star.message = specialStarMessages[star.id];
+      }
+    });
+  })
+  .catch(() => {
+    // Keep default empty messages if the API is unavailable.
+  });

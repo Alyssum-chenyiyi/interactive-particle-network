@@ -23,3 +23,45 @@ body::before {
   left: 0;
   z-index: 1;
 }
+
+#messageOverlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 3;
+}
+
+#messageOverlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#messageBox {
+  width: 60vw;
+  height: 60vh;
+  padding: 28px 32px;
+  border-radius: 14px;
+  background: rgba(15, 20, 30, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f2f5ff;
+  font-size: 18px;
+  line-height: 1.5;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+}
+
+#messageHint {
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.7;
+}
