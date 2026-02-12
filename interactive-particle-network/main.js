@@ -8,7 +8,7 @@ const ctxStars = canvasStars.getContext("2d");
 const defaultOptions = {
   numberOfStars: 300,
   maxDistance: 70,
-  starSize: { min: 2, max: 7 },
+  starSize: { min: 1, max: 5 },
   speedFactor: 1,
   mouseRadius: 200,
   starColor: "#fff",
@@ -27,9 +27,10 @@ const defaultOptions = {
   canvasGradient: null, // gradient for canvasStars background
   starDensity: "medium", // Options: 'low', 'medium', 'high', 'ultra'
   interactive: false, // If true the user can add stars by clicking on the canvasStars
-  parallaxEffect: true,
+  parallaxEffect: false,
   parallaxStrength: 1, // the higher, the slower the motion
-  idleRestartTime: 1000
+  idleRestartTime: 3000,
+  bounceOnEdges: false, // Set to true if you want the stars to bounce on the edges. Default is true.
 };
 
 const userOptions = {};
@@ -39,7 +40,7 @@ const starDensities = {
   low: 0.00005,
   medium: 0.0001,
   high: 0.0002,
-  ultra: 0.0004
+  ultra: 0.0004,
 };
 
 // Merge user options with default options
@@ -59,7 +60,6 @@ window.addEventListener("resize", function () {
 
 const stars = [];
 const mouse = { x: null, y: null };
-const backgroundParallax = { strength: 0.03, maxOffset: 20 };
 
 // Change in the mousemove event listener
 let animationIdleTimeout = null;
@@ -67,7 +67,6 @@ let animationIdleTimeout = null;
 window.addEventListener("mousemove", function (event) {
   mouse.x = event.x;
   mouse.y = event.y;
-  updateBackgroundParallax();
 
   // Clear any previous timeout
   clearTimeout(animationIdleTimeout);
@@ -76,7 +75,6 @@ window.addEventListener("mousemove", function (event) {
   animationIdleTimeout = setTimeout(() => {
     mouse.x = null;
     mouse.y = null;
-    updateBackgroundParallax();
   }, options.idleRestartTime);
 });
 
@@ -171,30 +169,6 @@ function updateStarPositionForParallax() {
   });
 }
 
-function updateBackgroundParallax() {
-  if (mouse.x === null || mouse.y === null) {
-    document.body.style.setProperty("--bg-x", "0px");
-    document.body.style.setProperty("--bg-y", "0px");
-    return;
-  }
-
-  const centerX = window.innerWidth / 2;
-  const centerY = window.innerHeight / 2;
-  const dx = mouse.x - centerX;
-  const dy = mouse.y - centerY;
-  const offsetX = Math.max(
-    -backgroundParallax.maxOffset,
-    Math.min(backgroundParallax.maxOffset, -dx * backgroundParallax.strength)
-  );
-  const offsetY = Math.max(
-    -backgroundParallax.maxOffset,
-    Math.min(backgroundParallax.maxOffset, -dy * backgroundParallax.strength)
-  );
-
-  document.body.style.setProperty("--bg-x", `${offsetX}px`);
-  document.body.style.setProperty("--bg-y", `${offsetY}px`);
-}
-
 Star.prototype.draw = function () {
   ctxStars.beginPath();
   ctxStars.fillStyle = options.starColor;
@@ -244,11 +218,20 @@ function animateStars() {
     star.y += star.speedY;
 
     if (star.shape === "star") star.rotation += star.rotationSpeed;
-    if (star.x > canvasStars.width || star.x < 0) {
-      star.speedX = -star.speedX;
-    }
-    if (star.y > canvasStars.height || star.y < 0) {
-      star.speedY = -star.speedY;
+
+    // Bounce on edges logic
+    if (options.bounceOnEdges) {
+      if (star.x > canvasStars.width || star.x < 0) {
+        star.speedX = -star.speedX;
+      }
+      if (star.y > canvasStars.height || star.y < 0) {
+        star.speedY = -star.speedY;
+      }
+    } else {
+      if (star.x > canvasStars.width) star.x = 0;
+      if (star.x < 0) star.x = canvasStars.width;
+      if (star.y > canvasStars.height) star.y = 0;
+      if (star.y < 0) star.y = canvasStars.height;
     }
     star.draw();
 
