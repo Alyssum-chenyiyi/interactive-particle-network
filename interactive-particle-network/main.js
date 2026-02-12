@@ -1,4 +1,4 @@
-const canvasBackground = document.getElementById("backgroundCanvas");
+﻿const canvasBackground = document.getElementById("backgroundCanvas");
 const ctxBackground = canvasBackground.getContext("2d");
 
 const canvasStars = document.getElementById("starsCanvas");
@@ -27,10 +27,9 @@ const defaultOptions = {
   canvasGradient: null, // gradient for canvasStars background
   starDensity: "medium", // Options: 'low', 'medium', 'high', 'ultra'
   interactive: false, // If true the user can add stars by clicking on the canvasStars
-  parallaxEffect: false,
+  parallaxEffect: true,
   parallaxStrength: 1, // the higher, the slower the motion
-  idleRestartTime: 3000,
-  bounceOnEdges: false, // Set to true if you want the stars to bounce on the edges. Default is true.
+  idleRestartTime: 1000
 };
 
 const userOptions = {};
@@ -40,7 +39,7 @@ const starDensities = {
   low: 0.00005,
   medium: 0.0001,
   high: 0.0002,
-  ultra: 0.0004,
+  ultra: 0.0004
 };
 
 // Merge user options with default options
@@ -218,20 +217,11 @@ function animateStars() {
     star.y += star.speedY;
 
     if (star.shape === "star") star.rotation += star.rotationSpeed;
-
-    // Bounce on edges logic
-    if (options.bounceOnEdges) {
-      if (star.x > canvasStars.width || star.x < 0) {
-        star.speedX = -star.speedX;
-      }
-      if (star.y > canvasStars.height || star.y < 0) {
-        star.speedY = -star.speedY;
-      }
-    } else {
-      if (star.x > canvasStars.width) star.x = 0;
-      if (star.x < 0) star.x = canvasStars.width;
-      if (star.y > canvasStars.height) star.y = 0;
-      if (star.y < 0) star.y = canvasStars.height;
+    if (star.x > canvasStars.width || star.x < 0) {
+      star.speedX = -star.speedX;
+    }
+    if (star.y > canvasStars.height || star.y < 0) {
+      star.speedY = -star.speedY;
     }
     star.draw();
 
